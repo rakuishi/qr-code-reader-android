@@ -4,9 +4,11 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
+import android.util.Size
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
@@ -76,9 +78,21 @@ class MainActivity : AppCompatActivity() {
 
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
+            val imageAnalysis = ImageAnalysis.Builder()
+                    .setTargetResolution(Size(viewBinding.previewView.width, viewBinding.previewView.height))
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build()
+                    .also {
+                        it.setAnalyzer(cameraExecutor, QrCodeAnalyzer { qrCode ->
+                            viewBinding.previewView.post {
+                                Toast.makeText(this, "QR Code: ${qrCode.text}", Toast.LENGTH_SHORT).show()
+                            }
+                        })
+                    }
+
             try {
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(this, cameraSelector, preview)
+                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis)
             } catch (e: Exception) {
                 Log.e(TAG, "Use case binding failed", e)
             }
